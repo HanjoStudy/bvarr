@@ -67,7 +67,7 @@ evaluate_bvar <- function(rolling_bvar, plot = T){
 
   df_forecast <- df_mcmc %>%
     left_join(actuals, by = c("variable")) %>%
-    mutate(dates = map(list(forecast_dates) %>%  rep(3), ~.x)) %>%
+    mutate(dates = map(list(forecast_dates) %>%  rep(nrow(df_mcmc)), ~.x)) %>%
     mutate(CRPS = map2(mcmc, actual, ~ scoringRules::crps_sample(dat = .x, y = .y)),
            LS = map2(mcmc, actual, ~ scoringRules::logs_sample(dat = .x, y = .y)))
 
