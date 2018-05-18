@@ -20,7 +20,8 @@ Imports:
     tibble,
     ggplot2,
     ggridges,
-    doSNOW
+    doSNOW,
+    scoringRules
 Description: The bvarr package allows estimation of some bayesian VAR
     models. The goal is to provide flexible well documented interface.
 LazyData: true
