@@ -11,7 +11,7 @@
 #'
 #'   A lower score indicates a better forecast
 #'
-#' @param rolling_bvar object of class `rolling_bvar`, see \link([rolling_BVAR](bvarr)
+#' @param rolling_bvar object of class `rolling_bvar`, see \link[rolling_BVAR]{bvarr}
 #' @param plot produce forecast evaluation plots
 #'
 #' @references

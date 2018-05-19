@@ -7,7 +7,7 @@
 evaluate_bvar(rolling_bvar, plot = T)
 }
 \arguments{
-\item{rolling_bvar}{object of class `rolling_bvar`, see \link([rolling_BVAR](bvarr)}
+\item{rolling_bvar}{object of class `rolling_bvar`, see \link[rolling_BVAR]{bvarr}}
 
 \item{plot}{produce forecast evaluation plots}
 }

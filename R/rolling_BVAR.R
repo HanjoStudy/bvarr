@@ -11,7 +11,7 @@
 #' @param lags number of lags for VAR estimate
 #' @param cores if cores are specified then forecasts are implemented in parallel
 #' @examples
-#' 
+#'
 #' df <- ggplot2::economics[,c(1, 4:6)]
 #'
 #'
@@ -19,43 +19,43 @@
 #'                   n_draws = 2000,
 #'                   lags = 4,
 #'                   cores = 3)
-#'                   
-#' bvar_res$forecast_density %>% filter(date == "2015-02-01") %>% 
-#'   tidyr::gather(., metric, value, -date) %>% 
+#'
+#' bvar_res$forecast_density %>% filter(date == "2015-02-01") %>%
+#'   tidyr::gather(., metric, value, -date) %>%
 #'   ggplot(., aes(value)) +
 #'   geom_density() +
 #'   facet_wrap(~metric, scales = c("free"))
-#'   
+#'
 #' plot(bvar_res)
 #'
 #' @return data.frame
 #' @export
 #'
 
-rolling_BVAR <- function(df, date_col, start, by = 1, fixedWindow = T, 
+rolling_BVAR <- function(df, date_col, start, by = 1, fixedWindow = T,
                          include = "raw",
                          n_draws = 2000,
                          lags = 4,
                          cores = 2){
-  
+
   options(stringsAsFactors = F)
   if(missing(date_col)) stop("No appropriate date column found: please provide data.frame with aptly named column: Date or date")
   if(!missing(cores)) parallel <- TRUE
   # Prepare data slices
-  orig <- df %>% 
+  orig <- df %>%
     mutate_if(is.factor, as.character)
   date_col <- dplyr::enquo(date_col)
 
   dates <- df %>%
     dplyr::pull(!!date_col)
-  
-  df <- df %>% 
+
+  df <- df %>%
     dplyr::select(-!!date_col)
-  
+
   initialWindow <- which(dates == start) - 1
-  
-  create_Time_slice <- function (y, initialWindow, horizon = by, fixedWindow = fixedWindow, 
-            skip = 0) 
+
+  create_Time_slice <- function (y, initialWindow, horizon = by, fixedWindow = fixedWindow,
+            skip = 0)
   {
     stops <- seq(initialWindow, (length(y) - horizon), by = skip + 1)
     if (fixedWindow) {
@@ -69,32 +69,32 @@ rolling_BVAR <- function(df, date_col, start, by = 1, fixedWindow = T,
     names(train) <- paste("Training", nums, sep = "")
     train
   }
-  
+
   TS_slices <- create_Time_slice(y = 1:nrow(df), initialWindow, horizon = 1, fixedWindow = F, skip = 0)
-  
+
   names(TS_slices) <- dates[-c(1:initialWindow)]
-  
+
   # Run BVAR
   include <- ifelse(include == "raw", "raw", c("mean", "median", "sd", "interval", "raw"))
-  
+
   if(parallel == T)
   {
-  
+
     library(doSNOW)
-    
+
     cl <- makeSOCKcluster(cores)
-    
+
     registerDoSNOW(cl)
     on.exit(stopCluster(cl))
     clusterExport(cl = cl, c('TS_slices', 'df'), envir = environment())
-    
+
     pb <- txtProgressBar(min = 1, max = length(TS_slices), style=3)
     progress <- function(n) setTxtProgressBar(pb, n)
-    
+
     opts <- list(progress=progress)
-    
-    BVAR_forecast <- foreach(i = 1:length(TS_slices), 
-                       .packages = c("bvarr", "dplyr"), 
+
+    BVAR_forecast <- foreach(i = 1:length(TS_slices),
+                       .packages = c("bvarr", "dplyr"),
                        .options.snow = opts) %dopar% {
                          x <- df[TS_slices[[i]],] %>% data.frame
                          setup <- bvar_conj_setup(x, p = lags)
@@ -102,18 +102,18 @@ rolling_BVAR <- function(df, date_col, start, by = 1, fixedWindow = T,
                          y <- bvar_conj_forecast(model, Y_in = NULL, Z_f = NULL, output = c("long", "wide"), h = by,
                                                                   out_of_sample = TRUE, type = c("prediction", "credible"), level = c(80, 95),
                                                                   include = include, fast_forecast = FALSE,
-                                                                  verbose = FALSE) %>% 
+                                                                  verbose = FALSE) %>%
                            data.frame(date = names(TS_slices)[i], .)
                          if(include == "raw" & by == 1)
-                           y <- y %>% purrr::set_names(c("date", names(x)))  
+                           y <- y %>% purrr::set_names(c("date", names(x)))
                          y
                        }
     close(pb)
-    
+
     BVAR_forecast <- do.call(rbind, BVAR_forecast)
-    
+
   } else {
-    
+
     BVAR_forecast <- list()
     for(i in 1:length(TS_slices)){
       x <- df[TS_slices[[i]],] %>% data.frame
@@ -122,33 +122,38 @@ rolling_BVAR <- function(df, date_col, start, by = 1, fixedWindow = T,
       y <- bvar_conj_forecast(model, Y_in = NULL, Z_f = NULL, output = c("long", "wide"), h = by,
         out_of_sample = TRUE, type = c("prediction", "credible"), level = c(80, 95),
         include = include, fast_forecast = FALSE,
-        verbose = FALSE) %>% 
-        data.frame(date = names(TS_slices)[i], .) 
+        verbose = FALSE) %>%
+        data.frame(date = names(TS_slices)[i], .)
       if(include == "raw" & by == 1)
-        y <- y %>%  
-        purrr::set_names(c("date", names(x)))  
+        y <- y %>%
+        purrr::set_names(c("date", names(x)))
       BVAR_forecast[[i]] <- y
     }
     BVAR_forecast <- do.call(rbind, BVAR_forecast)
   }
-  out <- BVAR_forecast %>% 
-    tbl_df %>% 
+  out <- BVAR_forecast %>%
+    tbl_df %>%
     mutate_if(is.factor, as.character)
-  
+
   out <- list(forecast_density = out, actuals = orig)
   class(out) <- c(class(out), "rolling_bvar")
   return(out)
 }
 
+#' @title Plot object of class rolling_bvar
+#' @description plots the distribution and line plots for the forecasts using ggplot
+#' @export
+#'
+#'
 plot.rolling_bvar <- function(rolling_bvar, plot = T){
-  
+
   if(!"rolling_bvar" %in% class(rolling_bvar)) stop("Object not of valid class rolling_bvar, see bvarr::rolling_BVAR")
-  
+
   Yraw_test <- rolling_bvar$actuals %>%
     gather(., variable, metric, -date) %>%
     mutate(date = as.character(date)) %>%
     filter(date %in% rolling_bvar$forecast_density$date)
-  
+
   gg_ridge <- rolling_bvar$forecast_density %>%
     gather(., variable, metric, -date) %>%
     ggplot(., aes(x = metric, y = date, group = date)) +
@@ -157,8 +162,8 @@ plot.rolling_bvar <- function(rolling_bvar, plot = T){
     facet_wrap(~variable, scales = "free_x") +
     theme_ridges() +
     labs(title = "Forecast density compared to actuals", subtitle ="Actuals (red)")
-  
-  
+
+
   gg_line <- rolling_bvar$forecast_density %>%
     gather(., variable, metric, -date) %>%
     group_by(variable, date) %>%
@@ -177,7 +182,7 @@ plot.rolling_bvar <- function(rolling_bvar, plot = T){
     print(gg_ridge)
     print(gg_line)
   }
-  
+
   return(list(gg_ridge, gg_line))
 }
 

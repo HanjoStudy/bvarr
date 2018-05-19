@@ -41,13 +41,13 @@ bvar_res <- rolling_BVAR(df, date, start = "2013-01-01", by = 1, fixedWindow = F
                   n_draws = 2000,
                   lags = 4,
                   cores = 3)
-                  
-bvar_res$forecast_density \%>\% filter(date == "2015-02-01") \%>\% 
-  tidyr::gather(., metric, value, -date) \%>\% 
+
+bvar_res$forecast_density \%>\% filter(date == "2015-02-01") \%>\%
+  tidyr::gather(., metric, value, -date) \%>\%
   ggplot(., aes(value)) +
   geom_density() +
   facet_wrap(~metric, scales = c("free"))
-  
+
 plot(bvar_res)
 
 }
