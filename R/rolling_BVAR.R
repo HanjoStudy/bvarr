@@ -40,7 +40,7 @@ rolling_BVAR <- function(df, date_col, start, h = 1, fixedWindow = T,
 
   options(stringsAsFactors = F)
   if(missing(date_col)) stop("No appropriate date column found: please provide data.frame with aptly named column: Date or date")
-  if(missing(cores)) parallel <- FALSE
+  parallel <- ifelse(missing(cores), FALSE, TRUE)
   # Prepare data slices
   orig <- df %>%
     mutate_if(is.factor, as.character)
@@ -152,7 +152,7 @@ rolling_BVAR <- function(df, date_col, start, h = 1, fixedWindow = T,
     tbl_df %>%
     mutate_if(is.factor, as.character)
 
-  out <- list(forecast_density = out, actuals = orig)
+  out <- list(forecast_density = out, actuals = orig, h = h)
   class(out) <- c(class(out), "rolling_bvar")
   return(out)
 }

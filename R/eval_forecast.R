@@ -41,7 +41,18 @@
 evaluate_bvar <- function(rolling_bvar, plot = T){
   if(!"rolling_bvar" %in% class(rolling_bvar)) stop("Only rolling evaluation at moment. Object not of valid class rolling_bvar, see bvarr::rolling_BVAR")
 
-  actuals <- rolling_bvar$actuals %>%
+  h <- rolling_bvar$h
+  if(h > 1){
+
+    actuals <- rolling_bvar$actuals %>%
+      mutate_if(is.numeric, function(x) lead(x, h)) %>%
+      .[complete.cases(.),]
+
+  } else {
+    actuals <- rolling_bvar$actuals
+  }
+
+  actuals <- actuals %>%
     gather(., variable, metric, -date) %>%
     mutate(date = as.character(date)) %>%
     filter(date %in% rolling_bvar$forecast_density$date) %>%
@@ -53,7 +64,24 @@ evaluate_bvar <- function(rolling_bvar, plot = T){
     nest(.key = actual) %>%
     mutate(actual = map(actual, ~.x %>% t %>% c))
 
-  df_mcmc <- rolling_bvar$forecast_density %>%
+  if(h > 1){
+    actuals <- actuals %>%
+      mutate(variable = paste0(variable, paste0("(t+", h ,")")))
+  }
+
+
+  if(h > 1){
+
+    forecast_dates <- head(unique(rolling_bvar$forecast_density$date), -h)
+    forecast_density <- rolling_bvar$forecast_density %>%
+      filter(`date` %in% forecast_dates)
+
+  } else {
+    forecast_dates <- unique(rolling_bvar$forecast_density$date)
+    forecast_density <- rolling_bvar$forecast_density
+  }
+
+  df_mcmc <- forecast_density %>%
     gather(., variable, metric, -date) %>%
     group_by(variable, date) %>%
     mutate(grouped_id = row_number()) %>%
@@ -63,7 +91,6 @@ evaluate_bvar <- function(rolling_bvar, plot = T){
     nest(.key = mcmc) %>%
     mutate(mcmc = map(mcmc, ~.x %>% t %>% as.matrix))
 
-  forecast_dates <- unique(rolling_bvar$forecast_density$date)
 
   df_forecast <- df_mcmc %>%
     left_join(actuals, by = c("variable")) %>%
@@ -75,6 +102,7 @@ evaluate_bvar <- function(rolling_bvar, plot = T){
     select(variable, dates, CRPS, LS) %>%
     unnest(.) %>%
     gather(., type, value, -c(variable, dates))
+
 
   if(plot){
     df_forecast %>%
