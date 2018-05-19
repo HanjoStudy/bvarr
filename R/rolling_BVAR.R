@@ -40,7 +40,7 @@ rolling_BVAR <- function(df, date_col, start, h = 1, fixedWindow = T,
 
   options(stringsAsFactors = F)
   if(missing(date_col)) stop("No appropriate date column found: please provide data.frame with aptly named column: Date or date")
-  if(!missing(cores)) parallel <- TRUE
+  if(missing(cores)) parallel <- FALSE
   # Prepare data slices
   orig <- df %>%
     mutate_if(is.factor, as.character)
@@ -111,7 +111,7 @@ rolling_BVAR <- function(df, date_col, start, h = 1, fixedWindow = T,
                            }else if(h > 1){
                              y <- y %>%
                                data.frame %>%
-                               select(1, (ncol(y)- h + 1): ncol(y)) %>%
+                               select(1, tail(names(.), ncol(df))) %>%
                                purrr::set_names(c("date", paste0(names(df), paste0("(t+", h ,")"))))
                            }
                          }
@@ -140,7 +140,7 @@ rolling_BVAR <- function(df, date_col, start, h = 1, fixedWindow = T,
         }else if(h > 1){
           y <- y %>%
             data.frame %>%
-            select(1, (ncol(y)- h + 1): ncol(y)) %>%
+            select(1, tail(names(.), ncol(df))) %>%
             purrr::set_names(c("date", paste0(names(df), paste0("(t+", h ,")"))))
         }
       }
