@@ -104,8 +104,18 @@ rolling_BVAR <- function(df, date_col, start, h = 1, fixedWindow = T,
                                                                   include = include, fast_forecast = FALSE,
                                                                   verbose = FALSE) %>%
                            data.frame(date = names(TS_slices)[i], .)
-                         if(include == "raw" & by == 1)
-                           y <- y %>% purrr::set_names(c("date", names(x)))
+                         if(include == "raw" & h == 1){
+                           if(h == 1){
+                             y <- y %>%
+                               purrr::set_names(c("date", names(x)))
+                           }
+                           if(h > 1){
+                             y <- y %>%
+                               data.frame %>%
+                               select(1, (ncol(y)- h + 1): ncol(y)) %>%
+                               purrr::set_names(c("date", paste0(names(df), paste0("(t+", h ,")"))))
+                           }
+                         }
                          y
                        }
     close(pb)
@@ -124,9 +134,18 @@ rolling_BVAR <- function(df, date_col, start, h = 1, fixedWindow = T,
         include = include, fast_forecast = FALSE,
         verbose = FALSE) %>%
         data.frame(date = names(TS_slices)[i], .)
-      if(include == "raw" & by == 1)
-        y <- y %>%
-        purrr::set_names(c("date", names(x)))
+      if(include == "raw" & h == 1){
+        if(h == 1){
+          y <- y %>%
+            purrr::set_names(c("date", names(x)))
+        }
+        if(h > 1){
+          y <- y %>%
+            data.frame %>%
+            select(1, (ncol(y)- h + 1): ncol(y)) %>%
+            purrr::set_names(c("date", paste0(names(df), paste0("(t+", h ,")"))))
+        }
+      }
       BVAR_forecast[[i]] <- y
     }
     BVAR_forecast <- do.call(rbind, BVAR_forecast)

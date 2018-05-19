@@ -4,8 +4,8 @@
 \alias{rolling_BVAR}
 \title{Rolling/expanding Bayesian VAR estimate}
 \usage{
-rolling_BVAR(df, date_col, start, by = 1, fixedWindow = T,
-  include = "raw", n_draws = 2000, lags = 4, cores = 2)
+rolling_BVAR(df, date_col, start, h = 1, fixedWindow = T, include = "raw",
+  n_draws = 2000, lags = 4, cores = 2)
 }
 \arguments{
 \item{df}{data.frame containg Y variables and a date column}
@@ -14,7 +14,7 @@ rolling_BVAR(df, date_col, start, by = 1, fixedWindow = T,
 
 \item{start}{start date from which the rolling estimation should begin ex. "2010-01-01"}
 
-\item{by}{what should the forecast horison be (Now only h = 1, by = 1)}
+\item{h}{what should the forecast horison be (Now only h = 1, by = 1)}
 
 \item{fixedWindow}{whether it should be expaning or rolling. Fixed = T is rolling}
 
