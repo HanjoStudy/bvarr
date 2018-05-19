@@ -4,7 +4,7 @@
 #' @param df data.frame containg Y variables and a date column
 #' @param date_col specify column name which contains t time elements
 #' @param start start date from which the rolling estimation should begin ex. "2010-01-01"
-#' @param by what should the forecast horison be (Now only h = 1, by = 1)
+#' @param h what should the forecast horison be (Now only h = 1, by = 1)
 #' @param fixedWindow whether it should be expaning or rolling. Fixed = T is rolling
 #' @param include keep raw for sample analysis
 #' @param n_draws number of draws to keep
@@ -32,7 +32,7 @@
 #' @export
 #'
 
-rolling_BVAR <- function(df, date_col, start, by = 1, fixedWindow = T,
+rolling_BVAR <- function(df, date_col, start, h = 1, fixedWindow = T,
                          include = "raw",
                          n_draws = 2000,
                          lags = 4,
@@ -54,7 +54,7 @@ rolling_BVAR <- function(df, date_col, start, by = 1, fixedWindow = T,
 
   initialWindow <- which(dates == start) - 1
 
-  create_Time_slice <- function (y, initialWindow, horizon = by, fixedWindow = fixedWindow,
+  create_Time_slice <- function (y, initialWindow, horizon = 1, fixedWindow = fixedWindow,
             skip = 0)
   {
     stops <- seq(initialWindow, (length(y) - horizon), by = skip + 1)
@@ -99,7 +99,7 @@ rolling_BVAR <- function(df, date_col, start, by = 1, fixedWindow = T,
                          x <- df[TS_slices[[i]],] %>% data.frame
                          setup <- bvar_conj_setup(x, p = lags)
                          model <- bvar_conj_estimate(setup, n_draws, verbose = T)
-                         y <- bvar_conj_forecast(model, Y_in = NULL, Z_f = NULL, output = c("long", "wide"), h = by,
+                         y <- bvar_conj_forecast(model, Y_in = NULL, Z_f = NULL, output = c("long", "wide"), h = h,
                                                                   out_of_sample = TRUE, type = c("prediction", "credible"), level = c(80, 95),
                                                                   include = include, fast_forecast = FALSE,
                                                                   verbose = FALSE) %>%
@@ -119,7 +119,7 @@ rolling_BVAR <- function(df, date_col, start, by = 1, fixedWindow = T,
       x <- df[TS_slices[[i]],] %>% data.frame
       setup <- bvar_conj_setup(x, p = lags)
       model <- bvar_conj_estimate(setup, n_draws, verbose = T)
-      y <- bvar_conj_forecast(model, Y_in = NULL, Z_f = NULL, output = c("long", "wide"), h = by,
+      y <- bvar_conj_forecast(model, Y_in = NULL, Z_f = NULL, output = c("long", "wide"), h = h,
         out_of_sample = TRUE, type = c("prediction", "credible"), level = c(80, 95),
         include = include, fast_forecast = FALSE,
         verbose = FALSE) %>%
