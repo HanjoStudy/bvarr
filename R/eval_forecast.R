@@ -110,13 +110,23 @@ evaluate_bvar <- function(rolling_bvar, plot = T, include_point = T){
            MAPE = map2(mcmc, actual, ~ point_accuracy(dat = .x, y = .y, metric = "MPE"))
            )
 
+  if(include_point){
+    df_forecast <- df_forecast %>%
+      mutate(ME = map2(mcmc, actual, ~ point_accuracy(dat = .x, y = .y, metric = "ME")),
+             RMSE = map2(mcmc, actual, ~ point_accuracy(dat = .x, y = .y, metric = "RMSE")),
+             MAE = map2(mcmc, actual, ~ point_accuracy(dat = .x, y = .y, metric = "MAE")),
+             MPE = map2(mcmc, actual, ~ point_accuracy(dat = .x, y = .y, metric = "MPE")),
+             MAPE = map2(mcmc, actual, ~ point_accuracy(dat = .x, y = .y, metric = "MPE"))
+      )
+  }
+
   df_forecast <- df_forecast %>%
-    select(variable, dates, CRPS:MAPE) %>%
+    select(variable, dates, CRPS:ncol(.)) %>%
     unnest(.) %>%
     gather(., type, value, -c(variable, dates))
 
 
-  if (plot | !include_point){
+  if (plot & !include_point){
     df_forecast %>%
       ggplot(., aes(x = dates, y = value, fill = type))+
       geom_bar(stat = "identity") +
@@ -127,7 +137,7 @@ evaluate_bvar <- function(rolling_bvar, plot = T, include_point = T){
       ggplot(., aes(value, fill = type)) +
       geom_density() +
       facet_wrap(~type + variable, scales = "free_x")
-  } else if (plot | include_point){
+  } else if (plot & include_point){
     message("Cant use plotting functionality and include point estimates. Produces very cluttered plots")
   }
 
