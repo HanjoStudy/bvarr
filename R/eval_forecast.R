@@ -13,6 +13,7 @@
 #'
 #' @param rolling_bvar object of class `rolling_bvar`, see \link[rolling_BVAR]{bvarr}
 #' @param plot produce forecast evaluation plots
+#' @param include_point include point forecast accuracy (uses median of predictive density)
 #'
 #' @references
 #'
@@ -28,7 +29,7 @@
 #'
 #' @examples
 #' df <- ggplot2::economics[,c(1, 4:6)]
-#' bvar_res <- rolling_BVAR(df, date, start = "2013-01-01", by = 1, fixedWindow = F,
+#' bvar_res <- rolling_BVAR(df, date, start = "2013-01-01", h = 1, fixedWindow = F,
 #'                           n_draws = 2000,
 #'                           lags = 4,
 #'                           cores = 3)
@@ -38,7 +39,7 @@
 #' @export
 #'
 #'
-evaluate_bvar <- function(rolling_bvar, plot = T){
+evaluate_bvar <- function(rolling_bvar, plot = T, include_point = T){
   if(!"rolling_bvar" %in% class(rolling_bvar)) stop("Only rolling evaluation at moment. Object not of valid class rolling_bvar, see bvarr::rolling_BVAR")
 
   h <- rolling_bvar$h
@@ -91,20 +92,31 @@ evaluate_bvar <- function(rolling_bvar, plot = T){
     nest(.key = mcmc) %>%
     mutate(mcmc = map(mcmc, ~.x %>% t %>% as.matrix))
 
+  point_accuracy <- function(dat, y, metric){
+    dat <- apply(dat, 1, median)
+    rep(forecast::accuracy(dat, y)[,metric], length(y))
+  }
+
 
   df_forecast <- df_mcmc %>%
     left_join(actuals, by = c("variable")) %>%
     mutate(dates = map(list(forecast_dates) %>%  rep(nrow(df_mcmc)), ~.x)) %>%
     mutate(CRPS = map2(mcmc, actual, ~ scoringRules::crps_sample(dat = .x, y = .y)),
-           LS = map2(mcmc, actual, ~ scoringRules::logs_sample(dat = .x, y = .y)))
+           LS = map2(mcmc, actual, ~ scoringRules::logs_sample(dat = .x, y = .y)),
+           ME = map2(mcmc, actual, ~ point_accuracy(dat = .x, y = .y, metric = "ME")),
+           RMSE = map2(mcmc, actual, ~ point_accuracy(dat = .x, y = .y, metric = "RMSE")),
+           MAE = map2(mcmc, actual, ~ point_accuracy(dat = .x, y = .y, metric = "MAE")),
+           MPE = map2(mcmc, actual, ~ point_accuracy(dat = .x, y = .y, metric = "MPE")),
+           MAPE = map2(mcmc, actual, ~ point_accuracy(dat = .x, y = .y, metric = "MPE"))
+           )
 
   df_forecast <- df_forecast %>%
-    select(variable, dates, CRPS, LS) %>%
+    select(variable, dates, CRPS:MAPE) %>%
     unnest(.) %>%
     gather(., type, value, -c(variable, dates))
 
 
-  if(plot){
+  if (plot | !include_point){
     df_forecast %>%
       ggplot(., aes(x = dates, y = value, fill = type))+
       geom_bar(stat = "identity") +
@@ -115,6 +127,8 @@ evaluate_bvar <- function(rolling_bvar, plot = T){
       ggplot(., aes(value, fill = type)) +
       geom_density() +
       facet_wrap(~type + variable, scales = "free_x")
+  } else if (plot | include_point){
+    message("Cant use plotting functionality and include point estimates. Produces very cluttered plots")
   }
 
   return(df_forecast)

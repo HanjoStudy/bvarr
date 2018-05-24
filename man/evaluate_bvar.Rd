@@ -4,12 +4,14 @@
 \alias{evaluate_bvar}
 \title{Evaluate density forecast with point realisations}
 \usage{
-evaluate_bvar(rolling_bvar, plot = T)
+evaluate_bvar(rolling_bvar, plot = T, include_point = T)
 }
 \arguments{
 \item{rolling_bvar}{object of class `rolling_bvar`, see \link[rolling_BVAR]{bvarr}}
 
 \item{plot}{produce forecast evaluation plots}
+
+\item{include_point}{include point forecast accuracy (uses median of predictive density)}
 }
 \value{
 Value of the score
@@ -31,7 +33,7 @@ crps_sample employs an empirical version of the quantile
 }
 \examples{
 df <- ggplot2::economics[,c(1, 4:6)]
-bvar_res <- rolling_BVAR(df, date, start = "2013-01-01", by = 1, fixedWindow = F,
+bvar_res <- rolling_BVAR(df, date, start = "2013-01-01", h = 1, fixedWindow = F,
                           n_draws = 2000,
                           lags = 4,
                           cores = 3)
